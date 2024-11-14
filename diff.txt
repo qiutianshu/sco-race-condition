@@ -1,0 +1,48 @@
+--- net/bluetooth/sco.c	2024-03-11 04:38:09
++++ ../sco.c	2024-11-13 22:35:49
+@@ -277,7 +277,6 @@
+ 		goto unlock;
+ 	}
+ 
+-	lock_sock(sk);
+ 
+ 	err = sco_chan_add(conn, sk, NULL);
+ 	if (err) {
+@@ -296,7 +295,6 @@
+ 		sco_sock_set_timer(sk, sk->sk_sndtimeo);
+ 	}
+ 
+-	release_sock(sk);
+ 
+ unlock:
+ 	hci_dev_unlock(hdev);
+@@ -576,23 +574,23 @@
+ 	if (alen < sizeof(struct sockaddr_sco) ||
+ 	    addr->sa_family != AF_BLUETOOTH)
+ 		return -EINVAL;
+-
+-	if (sk->sk_state != BT_OPEN && sk->sk_state != BT_BOUND)
++	
++	lock_sock(sk);
++	if (sk->sk_state != BT_OPEN && sk->sk_state != BT_BOUND){
++		release_sock(sk);
+ 		return -EBADFD;
++	}
+ 
+ 	if (sk->sk_type != SOCK_SEQPACKET)
+ 		err = -EINVAL;
+-
+-	lock_sock(sk);
++	
+ 	/* Set destination address and psm */
+ 	bacpy(&sco_pi(sk)->dst, &sa->sco_bdaddr);
+-	release_sock(sk);
+ 
+ 	err = sco_connect(sk);
+ 	if (err)
+ 		return err;
+ 
+-	lock_sock(sk);
+ 
+ 	err = bt_sock_wait_state(sk, BT_CONNECTED,
+ 				 sock_sndtimeo(sk, flags & O_NONBLOCK));
